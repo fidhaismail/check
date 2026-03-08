@@ -1,0 +1,20 @@
+file ./target/thumbv6m-none-eabi/release/ectf-hsm-rust
+target remote localhost:3333
+set print pretty on
+set print demangle on
+
+break main
+break uart_listener
+break handle_uart_data
+
+# define inspect_uart_state
+#   printf "=== UART Status ===\n"
+#   printf "UART0_FR (0x40000018): 0x%x\n", *(unsigned int*)0x40000018
+#   printf "UART0_DATA (0x40000008): 0x%x\n", *(unsigned int*)0x40000008
+#   printf "===============\n"
+# end
+
+info functions
+info variables
+monitor reset halt
+load

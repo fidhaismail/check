@@ -1,0 +1,35 @@
+# Rust build artifacts
+/target
+/Cargo.lock
+**/*.rs.bk
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build outputs
+*.elf
+*.bin
+*.hex
+build/
+*.o
+*.a
+*.so
+
+# Temporary files
+*.tmp
+.cargo/config.local
+
+# Environment files
+.env
+.env.local
+*.log
+
+# OS-specific
+Thumbs.db
+.AppleDouble
+.LSOverride

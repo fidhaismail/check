@@ -9,9 +9,11 @@ own risk!
 
 Copyright: Copyright (c) 2026 The MITRE Corporation
 """
+mod crypto;
+mod uart_hw;
 
 import argparse
-import json
+import os,json
 from pathlib import Path
 
 from loguru import logger
@@ -38,9 +40,10 @@ def gen_secrets(groups: list[int]) -> bytes:
     # Create the secrets object
     # You can change this to generate any secret material
     # The secrets file will never be shared with attackers
+
     secrets = {
         "groups": groups,
-        "some_secrets": "EXAMPLE",
+        "pin": os.urandom(6).hex(),
     }
 
     # NOTE: if you choose to use JSON for your file type, you will not

@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+mod crypto;
+mod uart_hw;
 extern crate alloc;
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicUsize, Ordering};
@@ -10,6 +12,28 @@ use alloc::vec::Vec;
 struct BumpAllocator;
 
 const HEAP_SIZE: usize = 16384; // 16 KB for embedded
+
+const DEVICE_PIN_HEX:&str = env!("DEVICE_PIN");
+
+fn get_reference_pin() -> [u8; MAX_PIN_LEN] {
+    let mut pin = [0u8; MAX_PIN_LEN];
+    let hex = DEVICE_PIN_HEX.as_bytes();
+    for i in 0..MAX_PIN_LEN {
+        let hi =hex_nibble(hex[i * 2]);
+        let lo = hex_nibble(hex[i * 2 + 1]);
+        pin[i] = (hi << 4) | lo;
+    }
+    pin
+}
+
+fn hex_nibble(b: u8) -> u8 {
+    match b{
+        b'0'..=b'9' => b - b'0',
+        b'a'..=b'f' => b - b'a' + 10,
+        b'A'..=b'F' => b - b'A' + 10,
+        _ => 0,
+    }
+}
 
 struct SyncHeap {
     heap: UnsafeCell<[u8; HEAP_SIZE]>,
@@ -49,8 +73,6 @@ static ALLOCATOR: BumpAllocator = BumpAllocator;
 use embassy_time::{Duration, Timer};
 use panic_halt as _;
 
-mod crypto;
-mod uart_hw;
 
 #[embassy_executor::main]
 async fn main(spawner: embassy_executor::Spawner) {
@@ -289,8 +311,36 @@ impl MockFileSystem {
 }
 
 /// fix properly
+
+
 fn validate_pin(pin: &[u8]) -> bool {
-return true
+    if pin.len() !=MAX_PIN_LEN {
+        return false;
+    }
+    let reference = get_reference_pin();
+    let mut diff: u8=0;
+    for i in 0..MAX_PIN_LEN {
+        diff |=pin[i] ^ reference[i];
+    }
+    diff==0
+}
+
+static PIN_FAIL_COUNT: AtomicUsize = AtomicUsize::new(0);
+const MAX_PIN_ATTEMPTS: usize = 5;
+
+fn validate_pin_with_lockout(pin: &[u8]) -> Result<(), &'static str> {
+    let fails = PIN_FAIL_COUNT.load(Ordering::SeqCst);  // ← this line must be here!
+    if fails >= MAX_PIN_ATTEMPTS {
+        return Err("Device locked!! :too many failed attempts");
+    }
+    if validate_pin(pin) {
+        PIN_FAIL_COUNT.store(0, Ordering::SeqCst);
+        Ok(())
+    } else {
+        let current = PIN_FAIL_COUNT.load(Ordering::SeqCst);
+        PIN_FAIL_COUNT.store(current + 1, Ordering::SeqCst);
+        Err("Invalid PIN")
+    }
 }
 
 struct MessageHandler {
@@ -330,9 +380,7 @@ impl MessageHandler {
 
         let pin = &body[..MAX_PIN_LEN];
 
-        if !validate_pin(pin) {
-            return Err("Invalid PIN format");
-        }
+        validate_pin_with_lockout(pin)?;
 
         // impl pin check
 

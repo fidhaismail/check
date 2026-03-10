@@ -3,6 +3,9 @@ name = "ectf-hsm-rust"
 version = "0.1.0"
 edition = "2021"
 
+[build-dependencies]
+serde_json = "1"
+
 [dependencies]
 embassy-executor = { version = "0.5", features = ["arch-cortex-m", "executor-thread"] }
 embassy-time = { version = "0.3" }
